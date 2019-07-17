@@ -3,7 +3,7 @@
 "nonce":3719471957562,
 "prev_hash":"deadbeefdeadbeef",
 "version":"v1",
-"threshold":1000000,
+"threshold":"beefdeadbeedfeaf",
 "transactions":[...]}
 
 hash function: sha-256
