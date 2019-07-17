@@ -1,0 +1,16 @@
+{"id":123,
+"time":unixtime,
+"nonce":3719471957562,
+"prev_hash":"deadbeefdeadbeef",
+"version":"v1",
+"threshold":1000000,
+"transactions":[...]}
+
+hash function: sha-256
+
+how to hash json: 
+to hash string, hash the bytes repr in utf-8.
+to hash int, turn it into base-10 string and hash as string.
+for every key-value pair, get the value's hash.
+in transactions list, get every dict, then get all value's hashes inside it.
+sort the hashes in ascending order, then concat them as raw bytes and hash the result.
