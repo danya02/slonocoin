@@ -26,7 +26,7 @@ def on_message(client, userdata, msg):
     global last_id
     global last_block
     try:
-        data = json.loads(msg.payload)
+        data = json.loads(str(msg.payload, 'utf-8'))
     except:
         traceback.print_exc()
         return None
