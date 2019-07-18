@@ -16,6 +16,11 @@ use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 
 
+extern crate hex;
+
+use hex::FromHex;
+
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct Block {
     id: u128,
@@ -39,6 +44,18 @@ fn hexcompare(a:&str, b:&str) -> Ordering {
         }
     }
     return Ordering::Equal;
+}
+
+fn u8compare(a:[u8;32], b:[u8;32]) -> Ordering {
+    for (x,y) in a.iter().zip(b.iter()) {
+        let ord = x.cmp(&y);
+        if ord != Ordering::Equal {return ord;}
+    }
+    return Ordering::Equal;
+}
+
+fn hex2u8(a:&str) -> Result<[u8;32], hex::FromHexError> {
+    <[u8; 32]>::from_hex(a)
 }
 
 fn stringhash(s:&str) -> [u8;32] {
@@ -81,14 +98,15 @@ fn hash_full(mut prepared:Vec<[u8;32]>, time:u64, nonce:i128) -> [u8;32]{
     hasher.result(&mut hash);
     hash
 }
-fn mine_block(mut b:Block) {
+fn mine_block(mut b:Block) -> Block {
     let prepared = get_constant_hashes(b.clone());
-    while true{
+    let threshold = hex2u8("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff").unwrap();
+    while u8compare(hash_full(prepared.clone(), b.time, b.nonce), threshold) == Ordering::Greater{
         b.nonce+=1;
-        let val = hash_full(prepared.clone(), get_unix_time(), b.nonce);
-        print!("{}: ",b.nonce);
-        for i in val.iter() {print!("{};",i);}println!(".");
+        b.time = get_unix_time();
+        
     }
+    b
 }
 fn main() {
     let blockstr =  r#"{"id":122,
@@ -98,8 +116,12 @@ fn main() {
 "version":"v1",
 "threshold":"beefdead"}
 "#;
-    let b: Block = serde_json::from_str(blockstr).unwrap();
-    println!("{:?}", b);
+    let mut b: Block = serde_json::from_str(blockstr).unwrap();
     println!("{:?}", hexcompare("9","a"));
-    mine_block(b);
+    let start = SystemTime::now();
+    b = mine_block(b);
+    let end = SystemTime::now();
+    let time = (end.duration_since(start).unwrap().as_nanos() as f64) /1_000_000_000.0;
+    println!("{:?}", b);
+    println!("Hashes: {}, time: {}, h/s: {}",b.nonce, time, (b.nonce as f64)/time);
 }
