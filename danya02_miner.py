@@ -64,6 +64,7 @@ def start_mining():
     global last_id
     global last_block
     last_id = 0
+    my_mined_blocks = 0
     while 1:
         block = {"id":last_id+1,
                 "time":0,
@@ -80,12 +81,14 @@ def start_mining():
                 valid = False
                 break
         if valid:
-            print(block)
+            my_mined_blocks +=1
+            print('Block',block['id'],'mined by me!')
             client.publish('blocks',payload=json.dumps(block))
             last_id = block['id']
             last_block = block
         else:
-            print('Missed block',block['id'])
+            print('Block',last_id,'mined by',last_block['debug_mined_by'])
+        print('My stats:',my_mined_blocks,'/',last_id,'=',my_mined_blocks/last_id)
 
 
 client = mqtt.Client()
