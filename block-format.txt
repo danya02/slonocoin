@@ -1,5 +1,5 @@
 {"id":123,
-"time":1563721228.208054,
+"time":1563721228208,
 "nonce":3719471957562,
 "prev_hash":"deadbeefdeadbeef",
 "version":"v1",
