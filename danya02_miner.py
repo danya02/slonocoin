@@ -28,18 +28,26 @@ def on_message(client, userdata, msg):
     try:
         data = json.loads(str(msg.payload, 'utf-8'))
     except:
+        print('Invalid JSON received:')
         traceback.print_exc()
         return None
     if is_valid_block(data):
         if data['id']>last_id:
+            print('This new block is newer!')
             last_id = data['id']
             last_block = data
 
 def is_valid_block(block):
     for i in ['id','time','nonce','prev_hash','version','threshold']:
         if i not in block:
+            print('Field',i,'not in block!')
             return False
-    return blockhash(block)<int(block['threshold'], 16)
+    a=blockhash(block)
+    if a<int(block['threshold'], 16):
+        print('New block valid!')
+    else:
+        print('New block has hash',hex(a),'while threshold is',hex(block['threshold']))
+        return False
 
 def stringhash(string):
     val = bytes(string, 'utf-8')
@@ -53,7 +61,7 @@ def blockhash(block):
     for i in block.values():
         if isinstance(i, str):
             hashes.append(stringhash(i))
-        elif isinstance(i,int):
+        elif isinstance(i,int) or isinstance(i,float):
             hashes.append(inthash(i))
         else:
             raise TypeError('Unknown type of object')
@@ -75,7 +83,7 @@ def start_mining():
                 'debug_mined_by':'danya02'}
         valid = True
         while blockhash(block)>threshold:
-            block['time']=int(time.time())
+            block['time']=time.time()
             block['nonce']+=1
             if last_id>=block['id']:
                 valid = False
@@ -90,14 +98,14 @@ def start_mining():
             print('Block',last_id,'mined by',last_block['debug_mined_by'])
         print('My stats:',my_mined_blocks,'/',last_id,'=',my_mined_blocks/last_id)
 
+if __name__ == '__main__':
+    client = mqtt.Client()
+    client.on_connect = on_connect
+    client.on_message = on_message
 
-client = mqtt.Client()
-client.on_connect = on_connect
-client.on_message = on_message
-
-client.connect('localhost',1883)
-client.loop_start()
-start_mining()
+    client.connect('localhost',1883)
+    client.loop_start()
+    start_mining()
 
 
 if False:
