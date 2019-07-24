@@ -4,9 +4,14 @@
 "prev_hash":"deadbeefdeadbeef",
 "version":"v1",
 "threshold":"beefdeadbeedfeaf",
-"transactions":[...]}
+"transactions":[...],
+"miner_public_key": "(public key pem file)",
+"message": "This is a random text message!"
+}
 
 hash function: sha-256
+signature algo: DSA
+
 
 how to hash json: 
 to hash string, hash the bytes repr in utf-8.
