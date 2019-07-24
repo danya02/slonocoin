@@ -69,9 +69,9 @@ def start_mining():
         block = {"id":last_id+1,
                 "time":0,
                 "nonce":0,
-                "prev_hash":hex(blockhash(last_block))[2:],
+                "prev_hash":hex(blockhash(last_block))[2:].rjust(64,'0'),
                 "version":"v0",
-                "threshold":hex(threshold)[2:],
+                "threshold":hex(threshold)[2:].rjust(64,'0'),
                 'debug_mined_by':'danya02'}
         valid = True
         while blockhash(block)>threshold:
