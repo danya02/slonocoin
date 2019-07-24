@@ -5,6 +5,28 @@ import traceback
 import json
 import paho.mqtt.client as mqtt
 
+from Cryptodome.Hash import SHA256
+from Cryptodome.PublicKey import ECC
+from Cryptodome.Signature import DSS
+
+try:
+    print('Loading keys...')
+    priv_key = ECC.import_key(open('privkey.pem').read())
+    pub_key_str = open('pubkey.pem').read()
+except FileNotFoundError:
+    print('Keys not found, generating...')
+    key = ECC.generate(curve='p521')
+    print('Generation complete.')
+    priv_key = key.export_key(format='PEM')
+    file_out = open("privkey.pem", "w")
+    file_out.write(priv_key)
+    file_out.close()
+    priv_key = ECC.import_key(priv_key)
+
+    pub_key_str = key.public_key().export_key(format='PEM')
+    file_out = open("pubkey.pem", "w")
+    file_out.write(pub_key_str)
+    file_out.close()
 
 threshold = int('f'*64,16)//300000
 block = {"id":0,
@@ -13,7 +35,8 @@ block = {"id":0,
 "prev_hash":"",
 "version":"v0",
 "threshold":'0',
-'debug_mined_by':'danya02'}
+'message':'Mined by danya02',
+'miner_public_key':pub_key_str}
 
 last_block = block
 last_id=0
@@ -36,7 +59,7 @@ def on_message(client, userdata, msg):
             last_block = data
 
 def is_valid_block(block):
-    for i in ['id','time','nonce','prev_hash','version','threshold']:
+    for i in ['id','time','nonce','prev_hash','version','threshold', 'miner_public_key', 'message']:
         if i not in block:
             return False
     return blockhash(block)<int(block['threshold'], 16)
@@ -56,7 +79,7 @@ def blockhash(block):
         elif isinstance(i,int):
             hashes.append(inthash(i))
         else:
-            raise TypeError('Unknown type of object')
+            raise TypeError(f'Unknown type of object: {i} (type {type(i)})')
     hashes.sort()
     return int(hashlib.sha256(b''.join(hashes)).hexdigest(),16)
 
@@ -72,7 +95,8 @@ def start_mining():
                 "prev_hash":hex(blockhash(last_block))[2:].rjust(64,'0'),
                 "version":"v0",
                 "threshold":hex(threshold)[2:].rjust(64,'0'),
-                'debug_mined_by':'danya02'}
+                'miner_public_key':pub_key_str,
+                'message':'Mined by danya02'}
         valid = True
         while blockhash(block)>threshold:
             block['time']=int(time.time()*1000)
@@ -87,7 +111,7 @@ def start_mining():
             last_id = block['id']
             last_block = block
         else:
-            print('Block',last_id,'mined by',last_block['debug_mined_by'])
+            print('Block',last_id,'mined: ',last_block['message'])
         print('My stats:',my_mined_blocks,'/',last_id,'=',my_mined_blocks/last_id)
 
 
