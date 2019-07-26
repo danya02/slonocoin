@@ -4,18 +4,30 @@
 "prev_hash":"deadbeefdeadbeef",
 "version":"v1",
 "threshold":"beefdeadbeedfeaf",
-"transactions":[...],
+"transactions":[
+	{"time": 1563721228208,
+	 "from": "(public key pem file) (may be null if this is block reward)",
+	 "to": "(public key pem file)",
+	 "amount": 1000,
+	 "transaction_fee": 100, # the total sum deducted is (amount)+(transaction fee) = 1100
+	 "block_id": 123,
+	 "sender_id": "foobar",
+	 "message": "From Bob, to Alice with love",
+	 "signature": "hex signature (of the hash of all other fields in the transaction) (may be null if this is block reward)"
+	}
+],
 "miner_public_key": "(public key pem file)",
 "message": "This is a random text message!"
 }
 
 hash function: sha-256
-signature algo: DSA
+signature algo: ECC
 
 
 how to hash json: 
 to hash string, hash the bytes repr in utf-8.
 to hash int, turn it into base-10 string and hash as string.
+the hash of null is the hash of the empty string.
 for every key-value pair, get the value's hash.
 in transactions list, get every dict, then get all value's hashes inside it.
 sort the hashes in ascending order, then concat them as raw bytes and hash the result.
