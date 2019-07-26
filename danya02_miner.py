@@ -58,7 +58,7 @@ def on_message(client, userdata, msg):
     if is_valid_block(data):
         print('Block valid')
         if data['id']>last_id:
-            last_id = data['id']
+            last_id = data['id'] # TODO: discover if this is a part of a genuine blockchain
             last_block = data
     else:
         print('block invalid')
