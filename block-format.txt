@@ -10,18 +10,18 @@
 	 "to": "(public key pem file)",
 	 "amount": 1000,
 	 "transaction_fee": 100, # the total sum deducted is (amount)+(transaction fee) = 1100
-	 "block_id": 123,
-	 "sender_id": "foobar",
-	 "message": "From Bob, to Alice with love",
+	 "block_id": 123, # the ID of the block in which this transaction should be included; if that block ID is in the past, the transaction is invalid and should not be added into a block
+	 "transaction_id": "1234abcd", # this ID must be different for every transaction in a single block for a single sender
+	 "message": "From Bob, to Alice with love", # arbitrary
 	 "signature": "hex signature (of the hash of all other fields in the transaction) (may be null if this is block reward)"
 	}
 ],
 "miner_public_key": "(public key pem file)",
-"message": "This is a random text message!"
+"message": "This is a random text message!" # arbitrary
 }
 
 hash function: sha-256
-signature algo: ECC
+signature algo: ECDSA
 
 
 how to hash json: 
