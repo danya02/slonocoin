@@ -1,18 +1,15 @@
 Every miner who can and will exchange blockchains must listen to the MQTT channel "blockexchange".
 
 For this example, Alice wants to get info about some blocks from Bob.
-First, Alice sends a "who is online?" message to "blockexchange".
-At this time, she remains anonymous.
 
-	{"action": "ping"}
-
-Other miners, including Bob, send back messages containing their own public key.
+Periodically miners, including Bob, send messages containing the index of the last block in their blockchain, as well as their own public key.
 In all interactions, the public key is PEM-encoded.
 
-	{"action": "ping_response",
-	"public key": "Bob's public key"}
+	{"action": "length_announce",
+	"public key": "Bob's public key",
+	"length": 9001,}
 
-Once Alice has chosen whom to interact with, she sends a message containing a "meet-me" channel's name to "blockexchange", as well as a session key. The session key is encrypted with Bob's public key, and then represented as Base-64 data. 
+Alice receives this message and sees that her blockchain is shorter, so she sends a message containing a "meet-me" channel's name to "blockexchange", as well as a session key. The session key is encrypted with Bob's public key, and then represented as Base-64 data. 
 
 	{"action": "meet_me",
 	"public_key": "Bob's public key",
@@ -33,29 +30,9 @@ Alice must now be subscribed to the channel name she chose, and once Bob also su
 	"message_hash": "sha256 of the message field in hex",
 	"initiator": false}
 
-(Bob can of course send these same messages, just switching the "initiator" field around. Its purpose is to detect messages that have been sent by the same process.
+(Bob can of course send these same messages, just switching the "initiator" field around. Its purpose is to detect messages that have been sent by the same process.)
 
-Now Alice can query Bob's stored blockchain. First she will ask Bob about the latest block he knows about:
-
-	{"action": "query_blockchain_length",
-	"initiator": true}
-
-Bob will then tell her about his blockchain length, which is equal to the ID of the last valid block.
-
-	{"action": "answer_blockchain_length",
-	"length": 9001,
-	"initiator": false}
-
-Alice sees that her blockchain is shorter, and tells Bob as such:
-
-	{"action": "compare_blockchain_length",
-	"blockchains_equal": false,
-	"my_blockchain_shorter": true,
-	"initiator": true}
-
-(If Alice's blockchain had actually been longer, the "my_blockchain_shorter" field would be false, prompting Bob to start querying Alice -- which he can do while the connection is open.)
-
-Now Alice asks Bob about blocks. For each block she needs to know about, she sends: 
+Now Alice can query Bob about blocks. For each block she needs to know about, she sends: 
 
 	{"action": "query_block", 
 	"block_id": 9001,
