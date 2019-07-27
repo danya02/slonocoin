@@ -54,7 +54,7 @@ def on_message(client, userdata, msg):
     except:
         traceback.print_exc()
         return None
-    print('Received potential block:',data)
+    #print('Received potential block:',data)
     if is_valid_block(data):
         print('Block valid')
         if data['id']>last_id:
@@ -80,7 +80,7 @@ def is_valid_transaction(xact):
         pub_key = ECC.import_key(xact['from'])
         hashes = []
         print('hashing transaction')
-        for field in ['time','from','to','amount','transaction_fee','block_id','sender_id','message']:
+        for field in ['time','from','to','amount','transaction_fee','block_id','transaction_id','message']:
             hashes.extend(fieldhash(xact[field]))
         hashes = b''.join(hashes)
         h = SHA256.new(hashes)
@@ -115,6 +115,7 @@ def is_valid_block(block):
             return False
         if block_rewards < get_block_reward():
             print('block reward too small')
+            return False
     return blockhash(block)<int(block['threshold'], 16)
 
 def stringhash(string):
@@ -178,7 +179,7 @@ def start_mining():
                     'amount': 100,
                     'transaction_fee':0,
                     'block_id': last_id+1,
-                    'sender_id': '',
+                    'transaction_id': '',
                     'message': 'block reward',
                     'signature': None,
                     'time': 0
@@ -204,6 +205,69 @@ def start_mining():
         print('My stats:',my_mined_blocks,'/',last_id,'=',my_mined_blocks/last_id)
 
 
+class Blockchain:
+    class JSONDict:
+        def __init__(self):
+            self.objs = {}
+        def __getitem__(self, item):
+            try:
+                if item not in self.blocks:
+                    with open(f'danya02_blockchain/{item}.json') as o:
+                        self.objs.update({item: json.load(o)})
+                return self.objs[item]
+            except:
+                return IndexError(traceback.format_exc())
+
+        def __setitem__(self, item, value):
+            self.objs[item] = value
+            try:
+                os.mkdir('danya02_blockchain')
+            except FileExistsError:
+                pass
+            with open(f'danya02_blockchain/{item}.json', 'w') as o:
+                o.write(json.dumps(value))
+        def __delitem__(self, item):
+            del self.objs[item]
+            os.unlink(f'danya02_blockchain/{item}.json')
+        def __len__(self):
+            try:
+                os.mkdir('danya02_blockchain')
+            except FileExistsError:
+                pass
+            return len(os.listdir('danya02_blockchain/'))
+
+    def __init__(self, client):
+        self.client = client
+        self.blocks = JSONDict()
+        self.active_chat_sessions = []
+
+    def parse_message(self, message):
+        try:
+            message = json.loads(message)
+            if message['action']=='length_announce':
+                if message['length']>len(self.blocks):
+                    self.start_new_chat_session(message)
+                elif message['length']<len(self.blocks):
+                      self.announce_my_length()
+        except:
+            for i in self.active_chat_sessions:
+                try:
+                    i.parse_message(message)
+                    return None
+                except:
+                    pass
+    def announce_my_length(self):
+        client.publish('blockexchange',payload=json.dumps({"action": "length_announce", "public key": pub_key_str, "length": len(self.blocks)}))
+
+    def start_new_chat_session(self, message):
+        try:
+            self.active_chat_sessions.append(ChatSession(message['public_key']))
+        except:
+            print('Error while starting chat session:')
+            traceback.print_exc()
+
+
+
 client = mqtt.Client()
 client.on_connect = on_connect
 client.on_message = on_message
@@ -213,19 +277,3 @@ client.loop_start()
 start_mining()
 
 
-if False:
-    st = time.time()
-    c=0
-    try:
-        print(hex(blockhash(block)), hex(threshold), sep='\n')
-        while blockhash(block)>threshold:
-            block['time']=int(time.time())
-            block['nonce']+=1
-            c+=1
-        print(block)
-    except:
-        traceback.print_exc()
-        et=time.time()
-        print('start time:',st,',end time:',et,',diff:',et-st)
-        print('hashes:',c)
-        print('h/s:',c/(et-st))
