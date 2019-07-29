@@ -131,14 +131,14 @@ class Miner:
             if not Miner.is_valid_transaction(i):
                 print(f'{i} is not a valid transaction')
                 return False
-            block_rewards += amount_if_block_reward(i)
-            if block_rewards > get_block_reward():
+            block_rewards += Miner.amount_if_block_reward(i)
+            if block_rewards > Miner.get_block_reward():
                 print('block reward too large')
                 return False
-            if block_rewards < get_block_reward():
+            if block_rewards < Miner.get_block_reward():
                 print('block reward too small')
                 return False
-        if self.blockhash(block)<int(block['threshold'], 16):
+        if Miner.blockhash(block)<int(block['threshold'], 16):
             return True
         else:
             print('Block hash is too high!')
