@@ -6,10 +6,14 @@ import json
 import paho.mqtt.client as mqtt
 import threading
 import os
+import uuid
 
 from Cryptodome.Hash import SHA256
-from Cryptodome.PublicKey import ECC
+from Cryptodome.PublicKey import RSA
 from Cryptodome.Signature import DSS
+from Crypto.Random import get_random_bytes
+from Crypto.Cipher import AES, PKCS1_OAEP
+
 
 class Miner:
     def __init__(self):
@@ -27,7 +31,7 @@ class Miner:
 
         client = mqtt.Client()
 
-        self.blockchain = Blockchain(client)
+        self.blockchain = Blockchain(client, self)
         client.on_connect = self.on_connect
         client.on_message = self.on_message
         
@@ -38,8 +42,8 @@ class Miner:
 
         self.start_mining()
 
-
-    def get_block_reward(self):
+    @staticmethod
+    def get_block_reward():
         return 100
     
     @staticmethod
@@ -66,6 +70,8 @@ class Miner:
     def fieldhash(obj):
         if obj is None:
             return [Miner.stringhash('')]
+        elif isinstance(obj, bytes):
+            return [hashlib.sha256(val).digest()]
         elif isinstance(obj, str):
             return [Miner.stringhash(obj)]
         elif isinstance(obj, int):
@@ -196,20 +202,20 @@ class Miner:
     def load_keys(self):
         try:
             print('Loading keys...')
-            self.priv_key = ECC.import_key(open('privkey.pem').read())
+            self.priv_key = RSA.import_key(open('privkey.pem').read())
             self.pub_key_str = open('pubkey.pem').read()
         except FileNotFoundError:
             print('Keys not found, generating...')
-            key = ECC.generate(curve='p521')
+            key = RSA.generate(2048)
             print('Generation complete.')
-            priv_key = key.export_key(format='PEM')
-            file_out = open("privkey.pem", "w")
+            priv_key = key.export_key()
+            file_out = open("privkey.pem", "wb")
             file_out.write(priv_key)
             file_out.close()
-            self.priv_key = ECC.import_key(priv_key)
+            self.priv_key = RSA.import_key(priv_key)
 
-            self.pub_key_str = key.public_key().export_key(format='PEM')
-            file_out = open("pubkey.pem", "w")
+            self.pub_key_str = key.publickey().export_key()
+            file_out = open("pubkey.pem", "wb")
             file_out.write(self.pub_key_str)
             file_out.close()
 
@@ -278,11 +284,15 @@ class Blockchain:
                 self.objs[obj] = False
             return self.objs[obj]
 
-    def __init__(self, client):
+    def __init__(self, client, miner):
         self.client = client
         self.blocks = Blockchain.JSONDict()
+        self.heard_miners = []
         self.active_chat_sessions = []
         self.last_block = {'id':1, 'message':'not really'}
+        self.miner = miner
+        self.thread = threading.Thread(target=self.loop_sending)
+        self.thread.start()
 
     @property
     @cache_for_duration(60)
@@ -308,6 +318,7 @@ class Blockchain:
         if topic=='blockexchange': # message is length announcement
             try:
                 if message['action']=='length_announce':
+                    self.heard_miners.append(message['miner_public_key'])
                     if message['length']>len(self.blocks):
                         self.start_new_chat_session(message)
                     elif message['length']<len(self.blocks):
@@ -322,25 +333,53 @@ class Blockchain:
                     print('that is higher id than I know of')
                     if message['id'] - self.last_block['id'] > 1: # jump in block id numbers
                         print('By a significant amount')
-                        self.get_blocks_starting_from(message['id'])
+                        self.get_blocks_starting_from(message['id'], message['miner_public_key'])
                     elif Miner.is_parent_block(self.last_block, message):
                         self.blocks[message['id']] = message
                         self.last_block = message
 
     
     def announce_my_length(self):
-        client.publish('blockexchange',payload=json.dumps({"action": "length_announce", "public key": pub_key_str, "length": len(self.blocks)}))
+        self.client.publish('blockexchange',payload=json.dumps({"action": "length_announce", "public key": self.miner.pub_key_str, "length": len(self.blocks)}))
 
-    def start_new_chat_session(self, message):
+    def get_blocks_starting_from(self, bid, miner_key):
         try:
-            self.active_chat_sessions.append(ChatSession(message['public_key']))
+            self.active_chat_sessions.append(ChatSession(self, miner_key, bid))
         except:
             print('Error while starting chat session:')
             traceback.print_exc()
+    
+    def loop_sending(self):
+        while True:
+            self.announce_my_length()
+            time.sleep(10)
+
+        
+
 
 class ChatSession:
-    def __init__(self, public_key):
-        raise NotImplemented
+    def __init__(self, blockchain, public_key, get_from_id=0):
+        channelname = str(uuid.uuid4())
+        sessionkey = get_random_bytes(32)
+        cipher_rsa = PKCS1_OAEP.new(public_key)
+        sessionkey = cipher_rsa.encrypt(sessionkey)
+        self.client = blockchain.client
+        client.subscribe(channelname)
+        self.get_from_id = get_from_id
+
+        blockchain.client.publish('blockexchange',payload=json.dumps({
+                                                                        'action':'meet_me',
+                                                                        'public_key':public_key,
+                                                                        'channel_name':channelname,
+                                                                        'session_key': sessionkey}))
+    def parse_message(self, message):
+        try:
+            cipher_aes = AES.new(self.sessionkey, AES.MODE_EAX, nonce)
+            data = cipher_aes.decrypt_and_verify(base64.b64decode(bytes(message, 'utf-8'), tag))
+        except Exception as e:
+            print(exception)
+
+    
 
 if __name__ == '__main__':
     m=Miner()
