@@ -70,7 +70,7 @@ def get_block_reward():
 def is_valid_transaction(xact):
     for i in ['time','from','to','amount','transaction_fee','block_id','sender_id','message','signature']:
         if i not in xact:
-            print(f'transaction missing required field {i}')
+            print('transaction missing required field',i)
             return False
     if xact['from'] is None:
         return True # this may be a valid block reward
