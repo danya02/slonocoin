@@ -103,12 +103,12 @@ def amount_if_block_reward(xact):
 def is_valid_block(block):
     for i in ['id','time','nonce','prev_hash','version','threshold', 'miner_public_key', 'message', 'transactions']:
         if i not in block:
-            print(f'required field {i} missing from block')
+            print('required field {} missing from block'.format(i))
             return False
     block_rewards = 0
     for i in block['transactions']:
         if not is_valid_transaction(i):
-            print(f'{i} is not a valid transaction')
+            print('{} is not a valid transaction'.format(i))
             return False
         block_rewards += amount_if_block_reward(i)
         if block_rewards > get_block_reward():
@@ -148,7 +148,7 @@ def fieldhash(obj):
     elif isinstance(obj, list):
         return flatten([fieldhash(i) for i in obj])
     else:
-        raise TypeError(f'Unknown type of object: {obj} (type {type(obj)})')
+        raise TypeError('Unknown type of object: {} (type {})'.format(obj, type(obj))
 
         
 
