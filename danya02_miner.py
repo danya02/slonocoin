@@ -4,6 +4,7 @@ import time
 import traceback
 import json
 import paho.mqtt.client as mqtt
+import threading
 
 from Cryptodome.Hash import SHA256
 from Cryptodome.PublicKey import ECC
@@ -39,7 +40,7 @@ block = {"id":0,
 'miner_public_key':pub_key_str,
 'transactions': []}
 
-message = 'Mined by... someone?'
+message = '.....'
 
 last_block = block
 last_id=0
@@ -189,13 +190,14 @@ def start_mining():
         valid = True
         while blockhash(block)>threshold:
             block['time']=int(time.time()*1000)
+            block['message']=message
             block['transactions'][0]['time'] = block['time']
             block['nonce']+=1
             if last_id>=block['id']:
                 valid = False
                 break
         if valid:
-            message = 'Mined by '+myname
+            message = myname
             my_mined_blocks +=1
             print('Block',block['id'],'mined by me! (message reset)')
             client.publish('blocks',payload=json.dumps(block))
@@ -212,7 +214,7 @@ client = mqtt.Client()
 client.on_connect = on_connect
 client.on_message = on_message
 
-client.connect('localhost',1883)
+client.connect(input('Server IP address: '),1883)
 client.loop_start()
 threading.Thread(target=start_mining, daemon=True).start()
 
