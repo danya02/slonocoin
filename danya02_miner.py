@@ -39,6 +39,8 @@ block = {"id":0,
 'miner_public_key':pub_key_str,
 'transactions': []}
 
+message = 'Mined by... someone?'
+
 last_block = block
 last_id=0
 
@@ -54,9 +56,7 @@ def on_message(client, userdata, msg):
     except:
         traceback.print_exc()
         return None
-    print('Received potential block:',data)
     if is_valid_block(data):
-        print('Block valid')
         if data['id']>last_id:
             last_id = data['id'] # TODO: discover if this is a part of a genuine blockchain
             last_block = data
@@ -161,6 +161,7 @@ def blockhash(block):
 def start_mining():
     global last_id
     global last_block
+    global message
     last_id = 0
     my_mined_blocks = 0
     while 1:
@@ -171,7 +172,7 @@ def start_mining():
                 "version":"v0",
                 "threshold":hex(threshold)[2:].rjust(64,'0'),
                 'miner_public_key':pub_key_str,
-                'message':'Mined by danya02',
+                'message':message,
                 'transactions':[
                     {'from': None,
                     'to':pub_key_str,
@@ -194,23 +195,30 @@ def start_mining():
                 valid = False
                 break
         if valid:
+            message = 'Mined by '+myname
             my_mined_blocks +=1
-            print('Block',block['id'],'mined by me!')
+            print('Block',block['id'],'mined by me! (message reset)')
             client.publish('blocks',payload=json.dumps(block))
             last_id = block['id']
             last_block = block
         else:
-            print('Block',last_id,'mined: ',last_block['message'])
+            print('Block',last_id,'mined by',last_block['message'])
         print('My stats:',my_mined_blocks,'/',last_id,'=',my_mined_blocks/last_id)
 
+
+myname = input('Your name: ')
 
 client = mqtt.Client()
 client.on_connect = on_connect
 client.on_message = on_message
 
-client.connect('10.0.0.115',1883)
+client.connect('localhost',1883)
 client.loop_start()
-start_mining()
+threading.Thread(target=start_mining, daemon=True).start()
+
+print('Enter the message you want to attach to your next block.')
+while 1:
+    message = myname + ': ' + input()
 
 
 if False:
