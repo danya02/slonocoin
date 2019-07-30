@@ -148,7 +148,7 @@ def fieldhash(obj):
     elif isinstance(obj, list):
         return flatten([fieldhash(i) for i in obj])
     else:
-        raise TypeError('Unknown type of object: {} (type {})'.format(obj, type(obj))
+        raise TypeError('Unknown type of object: {} (type {})'.format(obj, type(obj)))
 
         
 
